@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Live Screen</title>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            background: black;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: Arial;
+        }
+
+        #screen {
+            width: 100vw;
+            height: 100vh;
+            object-fit: contain;
+            background: black;
+        }
+
+        #status {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            color: #0f0;
+            font-size: 12px;
+            background: rgba(0,0,0,0.5);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-family: monospace;
+        }
+
+        /* ================= FAB ================= */
+
+        #fab-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 999;
+        }
+
+        #fab-main {
+            width: 60px;
+            height: 60px;
+            background: #00c853;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+            transition: transform 0.3s ease;
+        }
+
+        #fab-container.active #fab-main {
+            transform: rotate(45deg);
+        }
+
+        .fab-item {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            position: absolute;
+            right: 5px;
+            bottom: 0;
+            opacity: 0;
+            transform: translateY(20px) scale(0.8);
+            transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+            cursor: pointer;
+        }
+
+        /* warna tiap tombol */
+        .fab-item:nth-child(2) { background: #2979ff; } /* message */
+        .fab-item:nth-child(3) { background: #00b0ff; } /* audio */
+        .fab-item:nth-child(4) { background: #ff1744; } /* shutdown */
+        .fab-item:nth-child(5) { background: #aa00ff; } /* wallpaper */
+
+        /* posisi animasi */
+        #fab-container.active .fab-item:nth-child(2) {
+            transform: translateY(-70px) scale(1);
+            opacity: 1;
+        }
+
+        #fab-container.active .fab-item:nth-child(3) {
+            transform: translateY(-130px) scale(1);
+            opacity: 1;
+        }
+
+        #fab-container.active .fab-item:nth-child(4) {
+            transform: translateY(-190px) scale(1);
+            opacity: 1;
+        }
+
+        #fab-container.active .fab-item:nth-child(5) {
+            transform: translateY(-250px) scale(1);
+            opacity: 1;
+        }
+
+        /* delay animasi */
+        .fab-item:nth-child(2) { transition-delay: 0.05s; }
+        .fab-item:nth-child(3) { transition-delay: 0.1s; }
+        .fab-item:nth-child(4) { transition-delay: 0.15s; }
+        .fab-item:nth-child(5) { transition-delay: 0.2s; }
+
+        /* ================= POPUP ================= */
+
+        #popup {
+            position: fixed;
+            bottom: 100px;
+            right: 20px;
+            width: 230px;
+            background: #222;
+            padding: 10px;
+            border-radius: 10px;
+            display: none;
+            z-index: 999;
+        }
+
+        #popup input {
+            width: 100%;
+            padding: 8px;
+            border: none;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        #popup button {
+            width: 100%;
+            padding: 8px;
+            border: none;
+            border-radius: 6px;
+            background: #00c853;
+            color: white;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+<img id="screen">
+<div id="status">Connecting...</div>
+
+<!-- FAB -->
+<div id="fab-container">
+
+    <div id="fab-main">
+        <i id="fab-icon" class="fa-solid fa-plus"></i>
+    </div>
+
+    <!-- message -->
+    <div class="fab-item" onclick="togglePopup()">
+        <i class="fa-solid fa-message"></i>
+    </div>
+
+    <!-- audio -->
+    <div class="fab-item" onclick="toggleAudio()">
+        <i id="audioIcon" class="fa-solid fa-volume-xmark"></i>
+    </div>
+
+    <!-- shutdown -->
+    <div class="fab-item" onclick="shutdown()">
+        <i class="fa-solid fa-power-off"></i>
+    </div>
+
+    <!-- wallpaper -->
+    <div class="fab-item" onclick="chooseWallpaper()">
+        <i class="fa-solid fa-image"></i>
+    </div>
+
+</div>
+
+<!-- popup message -->
+<div id="popup">
+    <input id="msgInput" placeholder="Ketik pesan...">
+    <button onclick="sendMsg()">Kirim</button>
+</div>
+
+<!-- hidden input wallpaper -->
+<input type="file" id="wallInput" accept="image/*" style="display:none">
+
+<script>
+
+function getParam(name){
+    return new URL(window.location.href).searchParams.get(name);
+}
+
+let ws;
+let reconnectDelay = 3000;
+let lastFrameTime = 0;
+function connect() {
+  const kode = getParam("kode");
+  const host = window.location.host;
+
+  const wsUrl = `wss://${host}/live?kode=${kode}`;
+  ws = new WebSocket(wsUrl);
+
+  const status = document.getElementById("status");
+
+  ws.onopen = () => {
+    status.innerText = "Connected";
+  };
+
+  ws.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+
+      if (msg.type === "screen") {
+        document.getElementById("screen").src =
+          "data:image/jpeg;base64," + msg.data;
+      }
+
+    } catch (err) {
+      console.log("Parse error:", err);
+    }
+  };
+
+  ws.onerror = () => {
+    status.innerText = "Error";
+  };
+
+  ws.onclose = () => {
+    status.innerText = "Reconnecting...";
+    setTimeout(connect, 3000);
+  };
+}
+
+/* ================= FAB ================= */
+
+const fabContainer = document.getElementById("fab-container");
+const fabMain = document.getElementById("fab-main");
+const fabIcon = document.getElementById("fab-icon");
+const popup = document.getElementById("popup");
+
+fabMain.onclick = ()=>{
+    fabContainer.classList.toggle("active");
+    fabIcon.classList.toggle("fa-xmark");
+    fabIcon.classList.toggle("fa-plus");
+};
+
+/* ================= MESSAGE ================= */
+
+function togglePopup(){
+    popup.style.display = popup.style.display==="block"?"none":"block";
+}
+
+function sendMsg(){
+    const text = msgInput.value;
+    if(!text) return;
+
+    fetch(`/msg?id=${getParam("kode")}&text=${encodeURIComponent(text)}`);
+    msgInput.value="";
+    popup.style.display="none";
+}
+
+/* ================= AUDIO ================= */
+
+let audioEnabled=false;
+
+function toggleAudio(){
+    audioEnabled=!audioEnabled;
+
+    audioIcon.className = audioEnabled
+        ? "fa-solid fa-volume-high"
+        : "fa-solid fa-volume-xmark";
+
+    // optional kirim ke client
+    if(ws && ws.readyState === 1){
+        ws.send(JSON.stringify({
+            type: "command",
+            action: "audio",
+            enabled: audioEnabled
+        }));
+    }
+}
+
+/* ================= SHUTDOWN ================= */
+
+function shutdown(){
+    if(!confirm("⚠️ Yakin mau shutdown device?")) return;
+
+    fetch(`/shutdown?id=${getParam("kode")}`)
+        .then(()=>alert("⚡ Shutdown dikirim"))
+        .catch(()=>alert("❌ Gagal"));
+}
+
+/* ================= WALLPAPER ================= */
+
+function chooseWallpaper(){
+    wallInput.click();
+}
+
+wallInput.onchange = ()=>{
+    const file = wallInput.files[0];
+    if(!file) return;
+
+    const form = new FormData();
+    form.append("wallpaper", file);
+    form.append("id", getParam("kode"));
+
+    fetch("/wallpaper", {
+        method:"POST",
+        body: form
+    })
+    .then(()=>alert("🖼 Wallpaper dikirim"))
+    .catch(()=>alert("❌ Gagal upload"));
+};
+
+window.onload = connect;
+
+</script>
+
+</body>
+</html>
