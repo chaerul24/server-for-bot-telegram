@@ -2,6 +2,7 @@
 
 Bot Telegram untuk mengontrol client (PC) secara real-time menggunakan WebSocket + HTTP API.
 
+Untuk Client bisa klik [Di sini](https://github.com/chaerul24/Bot-Telegram-Controller-PC-WSS/)
 ---
 
 ## 🚀 Fitur
