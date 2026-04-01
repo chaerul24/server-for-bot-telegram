@@ -1,3 +1,6 @@
+<p align="center">
+  <img src="https://tele.chaerul.xyz/icon" width="200" />
+</p>
 # 🤖 Telegram Bot Controller (PC WSS)
 
 Bot Telegram untuk mengontrol client (PC) secara real-time menggunakan WebSocket + HTTP API.
