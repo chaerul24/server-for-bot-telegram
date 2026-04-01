@@ -62,7 +62,7 @@ BOT_TOKEN=ISI_TOKEN_BOT_KAMU
 ## ▶️ Jalankan Server
 
 ```bash
-node index.js
+node server.js
 ```
 
 Server akan berjalan di:
