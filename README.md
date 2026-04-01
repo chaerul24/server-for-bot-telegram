@@ -36,7 +36,8 @@ Bot Telegram untuk mengontrol client (PC) secara real-time menggunakan WebSocket
 
 ```bash
 git clone https://github.com/chaerul24/server-for-bot-telegram.git
-cd REPO
+mv server-for-bot-telegram server
+cd server
 npm install
 ```
 
