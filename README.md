@@ -163,7 +163,8 @@ Project ini dibuat untuk:
 
 ## 👨‍💻 Author
 
-* GitHub: https://github.com/USERNAME
+* GitHub: https://github.com/chaerul24
+* Created By Chaerul
 
 ---
 
